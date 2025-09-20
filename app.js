@@ -35,14 +35,17 @@ async function main(){
     await mongoose.connect(dbUrl);
 }
 
+// view engine
 app.set("views engine","ejs");
 app.set("views", path.join(__dirname, "views"));
+app.engine('ejs', ejsMate);
+
+// Middleware
 app.use(express.urlencoded({extended: true}));
 app.use(methodOverride("_method"));
-app.engine('ejs', ejsMate);
 app.use(express.static(path.join(__dirname, "/public")));
 
-
+//  Session store
 const store = MongoStore.create({
   mongoUrl: dbUrl,
   crypto: {
@@ -70,12 +73,14 @@ const sessionOption = {
 app.use(session(sessionOption));
 app.use(flash());
 
+// Passport setup
 app.use(passport.initialize());
 app.use(passport.session());
 passport.use(new LocalStrategy(User.authenticate()));
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser());
 
+// Flash + user middleware
 app.use((req, res, next) => {
   res.locals.success = req.flash("success");
   res.locals.error = req.flash("error");
@@ -83,16 +88,26 @@ app.use((req, res, next) => {
   next();
 });
 
+// Routes
 app.use("/listings", listingRouter);
 app.use("/listings/:id/reviews", reviewRouter);
 app.use("/", userRouter);
 
+// Root route
+app.get("/", (req, res) => {
+  res.redirect("/listings");
+});
+
+
+// Error handlaer
 app.use((err, req, res, next) => {
   let {statusCode = 500, message = "Something went wrong"} = err;
   res.status(statusCode).render("listings/error.ejs", {message});
   // res.status(statusCode).send(message);
 });
 
+
+// Start server
 app.listen(8080, () => {
     console.log("server is listening to port 8080");
 });
